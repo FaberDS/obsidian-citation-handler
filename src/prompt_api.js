@@ -1,11 +1,11 @@
 import { makeMdTable } from "./md.js";
 import { extractHighlights, hasInTextHighlights } from "./citation.js";
 import { $ } from "./utils.js";
-import {
-  ensureResultsBox,
-  renderResultsTableInline,
-  persistCitationsToNote,
-} from "./render.js";
+import { setBusy } from "./ui_lock.js";
+import { openFile as openFileWithCtx } from "./file_handling.js";
+
+import { renderResultsTableInline, persistCitationsToNote } from "./render.js";
+import { updateProgress } from "./toast_handler.js";
 
 if ("LanguageModel" in self) {
   const session = await LanguageModel.create({
@@ -63,6 +63,7 @@ function extractJsonObject(text) {
 }
 async function runCitationsOneByOne({ session }) {
   const promptBtn = $("promptCitations");
+
   promptBtn.setAttribute("disabled", true);
   const contentEl = $("content");
   const outEl = $("llmOutputElement");
@@ -78,58 +79,59 @@ async function runCitationsOneByOne({ session }) {
 
     return;
   }
+  setBusy(true, "Generating citations…");
+  try {
+    const rows = [];
 
-  const rows = [];
+    for (let i = 0; i < highlights.length; i++) {
+      const h = highlights[i];
 
-  outEl.textContent = `Processing ${highlights.length} highlights...\n`;
+      const prompt = buildCitationPrompt({
+        citationKey,
+        page: h.page,
+        quote: h.quote,
+        href: h.href,
+      });
 
-  for (let i = 0; i < highlights.length; i++) {
-    const h = highlights[i];
+      const stream = await session.promptStreaming(prompt);
 
-    const prompt = buildCitationPrompt({
+      let modelText = "";
+      for await (const chunk of stream) modelText += chunk;
+
+      const obj = extractJsonObject(modelText);
+
+      if (!obj.paraphrase || !obj.place)
+        throw new Error("Missing paraphrase/place");
+      if (String(obj.page) !== String(h.page)) obj.page = Number(h.page);
+      obj.href = h.href;
+      obj.citationKey = citationKey;
+      obj.autocite = `\\autocite[${h.page}]{${citationKey}}`;
+      renderResultsTableInline({ citationKey, rows });
+
+      rows.push({
+        quote: h.quote,
+        paraphrase: obj.paraphrase,
+        place: obj.place,
+        page: h.page,
+        href: h.href,
+      });
+      updatePromptButtonState();
+      updateProgress(i + 1, highlights.length);
+    }
+
+    const table = makeMdTable(rows);
+
+    // outEl.textContent = table;
+    await persistCitationsToNote({
+      noteHandle: window.currentNoteHandle,
       citationKey,
-      page: h.page,
-      quote: h.quote,
-      href: h.href,
+      rows,
+      refresh: () => openFileWithCtx(window.currentNotePath, window.fileCtx),
     });
-
-    const stream = await session.promptStreaming(prompt);
-
-    let modelText = "";
-    for await (const chunk of stream) modelText += chunk;
-
-    const obj = extractJsonObject(modelText);
-
-    if (!obj.paraphrase || !obj.place)
-      throw new Error("Missing paraphrase/place");
-    if (String(obj.page) !== String(h.page)) obj.page = Number(h.page);
-    obj.href = h.href;
-    obj.citationKey = citationKey;
-    obj.autocite = `\\autocite[${h.page}]{${citationKey}}`;
-    renderResultsTableInline({ citationKey, rows });
-
-    rows.push({
-      quote: h.quote,
-      paraphrase: obj.paraphrase,
-      place: obj.place,
-      page: h.page,
-      href: h.href,
-    });
-    updatePromptButtonState();
-
-    outEl.textContent = `Done ${i + 1}/${highlights.length}...\n`;
+  } finally {
+    setBusy(false);
+    promptBtn.setAttribute("disabled", true);
   }
-
-  const table = makeMdTable(rows);
-
-  outEl.textContent = table;
-  await persistCitationsToNote({
-    noteHandle: window.currentNoteHandle,
-    citationKey,
-    rows,
-    refresh: () => openFileWithCtx(window.currentNotePath, fileCtx),
-  });
-  promptBtn.setAttribute("disabled", true);
 }
 
 function updatePromptButtonVisibility() {
@@ -220,6 +222,9 @@ function updatePromptButtonState() {
     : "Generate citations";
 
   lastAnnoHash = h;
+  console.log("HASHES: ", unchanged);
+  console.log(h);
+  console.log(lastAnnoHash);
 }
 
 function watchContent() {

@@ -1,5 +1,8 @@
 import "./style.css";
 import { $ } from "./utils.js";
+import { checkBrowserSupport } from "./precheck.js";
+
+checkBrowserSupport();
 import {
   loadLastDirHandle,
   saveLastDirHandle,
@@ -8,6 +11,7 @@ import {
 } from "./local_db.js";
 import { openFile as openFileWithCtx } from "./file_handling.js";
 import "./prompt_api.js";
+import { isBusy } from "./ui_lock.js";
 
 import { ensureResultsBox, renderResultsTableInline } from "./render.js";
 
@@ -18,7 +22,7 @@ const filterEl = $("filter");
 const filesEl = $("files");
 const metaEl = $("meta");
 const contentEl = $("content");
-
+const llmOutputEl = $("llmOutputElement");
 // STATE
 let dirHandle = null;
 let activePath = "";
@@ -30,13 +34,9 @@ function setActivePath(p) {
 }
 
 openBtn.addEventListener("click", async () => {
+  console.log("open clicked. busy?", isBusy());
   try {
-    const stored = await loadLastDirHandle();
-
-    if (stored) {
-      const ok = await openDirHandle(stored, { allowPrompt: true });
-      if (ok) return;
-    }
+    if (isBusy()) return;
 
     const picked = await window.showDirectoryPicker({ mode: "readwrite" });
     await ensurePermission(picked, "readwrite");
@@ -51,6 +51,7 @@ openBtn.addEventListener("click", async () => {
 filterEl.addEventListener("input", () => renderFileList());
 
 filesEl.addEventListener("click", async (e) => {
+  if (isBusy()) return;
   const btn = e.target.closest("button[data-path]");
   if (!btn) return;
 
@@ -64,20 +65,8 @@ filesEl.addEventListener("click", async (e) => {
     citationKeyFromPath,
     mdToHtml,
   });
+  llmOutputEl.innerHTML = "";
 });
-
-// --- RESTORE ON LOAD (NO PROMPT) ---
-
-(async function restoreOnLoad() {
-  try {
-    const stored = await loadLastDirHandle();
-    if (stored) await openDirHandle(stored, { allowPrompt: false });
-  } catch (e) {
-    console.warn("restoreOnLoad failed:", e?.message || e);
-  }
-})();
-
-// --- CORE ---
 
 async function openDirHandle(handle, { allowPrompt = false } = {}) {
   dirHandle = handle;
@@ -90,13 +79,19 @@ async function openDirHandle(handle, { allowPrompt = false } = {}) {
     }
     await ensurePermission(dirHandle, "read");
   }
+  console.log("openDirHandle.", q);
 
   statusEl.textContent = dirHandle.name;
   metaEl.textContent = "";
+  activePath = "";
+  filterEl.value = "";
+  filesEl.replaceChildren();
+  llmOutputEl.innerHTML = "";
   contentEl.replaceChildren();
 
   files = await listTextFiles(dirHandle);
   files.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+  console.log("listed files:", files.length, files.slice(0, 5));
 
   renderFileList();
 
@@ -349,3 +344,20 @@ function escapeHtml(s) {
     console.warn("restoreOnLoad failed:", e?.message || e);
   }
 })();
+
+function buildFileCtx() {
+  return {
+    get files() {
+      return files;
+    },
+    setActivePath,
+    saveLastPath,
+    renderFileList,
+    metaEl,
+    contentEl,
+    citationKeyFromPath,
+    mdToHtml,
+  };
+}
+
+window.fileCtx = buildFileCtx();

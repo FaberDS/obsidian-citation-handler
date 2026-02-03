@@ -49,12 +49,27 @@
       </aside>
 
       <main class="main">
-        <div class="content-wrapper">
+        <div id="note-card" class="card note-card">
           <pre id="meta" class="meta"></pre>
           <article id="content" class="content"></article>
           <div id="llmOutputElement"></div>
         </div>
       </main>
+    </div>
+    <div id="progress-toast" class="toast hidden">
+      <div class="toast-content">
+        <span id="toast-message">Processing...</span>
+        <span id="toast-count" class="toast-count"></span>
+      </div>
+      <div class="progress-track">
+        <div id="toast-bar" class="progress-fill" style="width: 0%"></div>
+      </div>
+    </div>
+    <div id="busy-overlay" class="busyOverlay hidden" aria-hidden="true">
+      <div class="busyOverlayCard">
+        <div class="busyOverlayTitle">Generating citations…</div>
+        <div class="busyOverlayHint">Please don’t change files or vaults.</div>
+      </div>
     </div>
 
     <script type="module" src="./src/main.js"></script>
