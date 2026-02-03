@@ -4,8 +4,9 @@ import {
   writeFileText,
 } from "./file_handling.js";
 import { $ } from "./utils.js";
-
+import { ui } from "./ui.js";
 import { makeMdCitationsSection } from "./md.js";
+import { state } from "./state.js";
 
 export function ensureResultsBox() {
   let box = $("citationsBox");
@@ -39,10 +40,8 @@ export function ensureResultsBox() {
   `;
 
   copyBtn.addEventListener("click", async () => {
-    const statusEl = $("status");
-
-    const vault = (statusEl.innerText || "").trim();
-    const path = (window.currentNotePath || "").trim();
+    const vault = (ui.statusEl.innerText || "").trim();
+    const path = (state.currentNotePath || "").trim();
 
     const file = (path.split("/").pop() || path).replace(
       /\.(md|markdown|txt)$/i,
@@ -87,7 +86,6 @@ export function ensureResultsBox() {
 
 export function renderResultsTableInline({ citationKey, rows }) {
   ensureResultsBox();
-  console.log(rows);
   const title = $("citationsBoxTitle");
   title.textContent = `Citations – ${citationKey} (${rows.length})`;
 
@@ -214,6 +212,19 @@ function upsertBetweenMarkers(noteMd, startMarker, endMarker, newBlock) {
   return `${noteMd}${sep}\n${wrapped}\n`;
 }
 
-function citeSentenceFromRow(r, citationKey) {
-  return `"${r.quote}" \\autocite[${r.page}]{${citationKey}}`;
+export function renderFileList() {
+  const q = (ui.filterEl.value || "").trim().toLowerCase();
+
+  ui.filesEl.replaceChildren(
+    ...state.files
+      .filter((f) => (q ? f.path.toLowerCase().includes(q) : true))
+      .map((f) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.path = f.path;
+        b.textContent = f.path;
+        if (f.path === state.activePath) b.className = "active";
+        return b;
+      }),
+  );
 }

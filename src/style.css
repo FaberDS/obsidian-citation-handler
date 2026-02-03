@@ -108,7 +108,8 @@ body {
 }
 
 .top-right .btn,
-.citationsBox .btn {
+.citationsBox .btn,
+.action-column .copyBtn {
   height: 36px;
   display: inline-flex;
   align-items: center;
@@ -132,14 +133,16 @@ body {
 }
 
 .top-right .btn-primary,
-.citationsBox .btn-primary {
+.citationsBox .btn-primary,
+.action-column .copyBtn {
   background: color-mix(in oklab, var(--primary), var(--bg) 70%);
   border-color: color-mix(in oklab, var(--primary), var(--border) 35%);
   color: var(--primary-fg);
 }
 
 .top-right .btn-primary:hover,
-.citationsBox .btn-primary:hover {
+.citationsBox .btn-primary:hover,
+.action-column .copyBtn:hover {
   background: color-mix(in oklab, var(--primary-hover), var(--bg) 62%);
 }
 

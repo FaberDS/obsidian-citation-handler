@@ -1,11 +1,12 @@
 import { makeMdTable } from "./md.js";
 import { extractHighlights, hasInTextHighlights } from "./citation.js";
 import { $ } from "./utils.js";
+import { state } from "./state.js";
 import { setBusy } from "./ui_lock.js";
 import { openFile as openFileWithCtx } from "./file_handling.js";
 
 import { renderResultsTableInline, persistCitationsToNote } from "./render.js";
-import { updateProgress } from "./toast_handler.js";
+import { updateProgress, toastError } from "./toast_handler.js";
 
 if ("LanguageModel" in self) {
   const session = await LanguageModel.create({
@@ -24,17 +25,6 @@ if ("LanguageModel" in self) {
   });
 } else {
   console.log("❌ LanguageModel is not available");
-}
-
-function parseModelLine(line) {
-  let s = line.trim().replace(/^\-\s*/, "");
-
-  const placeMatch = s.match(/\(place:\s*([^)]+)\)/i);
-  const place = placeMatch ? placeMatch[1].trim() : "";
-
-  const paraphrase = placeMatch ? s.slice(0, placeMatch.index).trim() : s;
-
-  return { paraphrase, place };
 }
 
 function buildCitationPrompt({ quote }) {
@@ -74,7 +64,8 @@ async function runCitationsOneByOne({ session }) {
 
   const highlights = extractHighlights(noteHtml);
   if (!highlights.length) {
-    outEl.textContent = "No highlights found.";
+    toastError("No highlights found.");
+
     promptBtn.setAttribute("disabled", false);
 
     return;
@@ -121,12 +112,11 @@ async function runCitationsOneByOne({ session }) {
 
     const table = makeMdTable(rows);
 
-    // outEl.textContent = table;
     await persistCitationsToNote({
-      noteHandle: window.currentNoteHandle,
+      noteHandle: state.currentNoteHandle,
       citationKey,
       rows,
-      refresh: () => openFileWithCtx(window.currentNotePath, window.fileCtx),
+      refresh: () => openFileWithCtx(state.currentNotePath, state.fileCtx),
     });
   } finally {
     setBusy(false);
@@ -222,9 +212,6 @@ function updatePromptButtonState() {
     : "Generate citations";
 
   lastAnnoHash = h;
-  console.log("HASHES: ", unchanged);
-  console.log(h);
-  console.log(lastAnnoHash);
 }
 
 function watchContent() {

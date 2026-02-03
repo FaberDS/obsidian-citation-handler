@@ -1,4 +1,7 @@
-import { renderResultsTableInline } from "./render.js";
+import { renderResultsTableInline, renderFileList } from "./render.js";
+import { mdToHtml } from "./md.js";
+import { ui } from "./ui.js";
+import { state } from "./state.js";
 
 export async function ensureReadWritePermission(handle) {
   const opts = { mode: "readwrite" };
@@ -27,37 +30,27 @@ export async function writeFileText(handle, text) {
 }
 
 export async function openFile(path, ctx) {
-  const {
-    files,
-    setActivePath,
-    saveLastPath,
-    renderFileList,
-    metaEl,
-    contentEl,
-    citationKeyFromPath,
-    mdToHtml,
-  } = ctx;
+  const { setActivePath, saveLastPath, citationKeyFromPath } = ctx;
 
-  const item = files.find((f) => f.path === path);
+  const item = state.files.find((f) => f.path === path);
   if (!item) return;
 
   setActivePath(path);
   saveLastPath(path);
-  renderFileList();
 
-  window.currentNoteHandle = item.handle;
-  window.currentNotePath = path;
+  state.currentNoteHandle = item.handle;
+  state.currentNotePath = path;
 
   const file = await item.handle.getFile();
   const fullText = await file.text();
   const key = citationKeyFromPath(path);
 
-  metaEl.textContent = `${path}\n${new Date(file.lastModified).toLocaleString()}`;
-  metaEl.dataset.citationKey = key;
+  ui.metaEl.textContent = `${path}\n${new Date(file.lastModified).toLocaleString()}`;
+  ui.metaEl.dataset.citationKey = key;
 
   const { cleanText, citationsRows } = parseCitationsFromMd(fullText);
 
-  contentEl.innerHTML = mdToHtml(cleanText);
+  ui.contentEl.innerHTML = mdToHtml(cleanText);
 
   const oldBox = document.getElementById("citationsBox");
   if (oldBox) oldBox.remove();
