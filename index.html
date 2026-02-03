@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="64x64"
+      href="./public/favicon.ico"
+    />
+    <title>Vault Viewer</title>
+  </head>
+  <body>
+    <header class="top">
+      <div class="top-left">
+        <img
+          src="./public/logo-192x192.png"
+          alt="logo"
+          srcset=""
+          class="logo"
+        />
+        <span class="app-title">Vault Viewer</span>
+      </div>
+
+      <div class="top-center">
+        <input
+          id="filter"
+          type="search"
+          placeholder="Search files..."
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="top-right">
+        <button id="promptCitations" class="btn btn-primary">
+          Request Citations
+        </button>
+        <span id="status" class="status">No vault selected</span>
+        <button id="open" type="button" class="btn btn-secondary">
+          Select Vault
+        </button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div id="files" class="files"></div>
+      </aside>
+
+      <main class="main">
+        <div class="content-wrapper">
+          <pre id="meta" class="meta"></pre>
+          <article id="content" class="content"></article>
+          <div id="llmOutputElement"></div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
