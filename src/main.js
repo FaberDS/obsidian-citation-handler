@@ -6,6 +6,8 @@ import { renderFileList } from "./render.js";
 import { mdToHtml } from "./md.js";
 import { toastMessageOnly } from "./toast_handler.js";
 import { ensureReadWritePermission } from "./file_handling.js";
+import { syncTopBar } from "./ui_state.js";
+
 const REQUIRED_PERMISSION = "readwrite";
 checkBrowserSupport();
 import {
@@ -89,6 +91,7 @@ async function openDirHandle(handle, { allowPrompt = false } = {}) {
 
   const savedPath = await loadLastPath();
   const hasSaved = savedPath && state.files.some((f) => f.path === savedPath);
+  syncTopBar();
 
   if (hasSaved) {
     await openFileWithCtx(savedPath, {
@@ -157,3 +160,4 @@ function buildFileCtx() {
 }
 
 state.fileCtx = buildFileCtx();
+syncTopBar();

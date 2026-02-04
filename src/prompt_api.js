@@ -7,6 +7,21 @@ import { openFile as openFileWithCtx } from "./file_handling.js";
 
 import { renderResultsTableInline, persistCitationsToNote } from "./render.js";
 import { updateProgress, toastError } from "./toast_handler.js";
+import { syncTopBar } from "./ui_state.js";
+
+function watchContentForPromptToggle() {
+  const contentEl = document.getElementById("content");
+  if (!contentEl) return;
+
+  syncTopBar();
+
+  const obs = new MutationObserver(() => syncTopBar());
+  obs.observe(contentEl, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+}
 
 if ("LanguageModel" in self) {
   const session = await LanguageModel.create({
@@ -131,20 +146,6 @@ function updatePromptButtonVisibility() {
 
   const show = hasInTextHighlights(contentEl.innerHTML);
   promptBtn.hidden = !show;
-}
-
-function watchContentForPromptToggle() {
-  const contentEl = document.getElementById("content");
-  if (!contentEl) return;
-
-  updatePromptButtonVisibility();
-
-  const obs = new MutationObserver(() => updatePromptButtonVisibility());
-  obs.observe(contentEl, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
 }
 
 function decodeHtmlEntities(str) {
